@@ -4,10 +4,13 @@ Vocabulario RPG (~1200 palabras) para el sistema de autocompletado.
 """
 
 BLACKLIST_WORDS = [
-    "idiota", "estupido", "maldito", "mierda", "basura",
-    "imbecil", "pendejo", "cabron", "puta", "hijo",
-    "inutil", "animal", "bestia", "trampa", "tramposso",
-    "hacker", "exploit", "cheat", "hack"
+    "idiota", "estupido","estupida" , "maldita", "mierda", "basura",
+    "imbecil", "pendejo","pendeja", "cabron","cabrona", "puta",
+    "inutil", "animal", "bestia", "hitler", "nigga", "prostituta",
+    "prostituto", "vagina", "pussy", "pene", "dick", "rape", "bitch",
+    "malparido", "malparida", "67", "six", "sevem", "sixseven", "coito",
+    "sex", "sexo", "sexo2", "Trabajo", "chamba", "job", "agarrar la pala",
+    
 ]
 
 RPG_VOCABULARY = [
@@ -170,7 +173,7 @@ RPG_VOCABULARY = [
     "suerte", "fortuna", "bendicion",
     "veneno resistencia", "fuego resistencia",
     "hielo resistencia", "rayo resistencia",
-    "oscuridad resistencia",
+    "oscuridad resistencia", "insanes"
     # ── Narrativa y rol ──────────────────────────
     "personaje", "personajes", "protagonista",
     "antagonista", "heroe", "heroina", "villano",
@@ -219,7 +222,7 @@ RPG_VOCABULARY = [
     "desesperado", "determinado", "resignado",
     "furioso", "calmado", "sereno",
     "alegre", "triste", "melancólico",
-    "asombrado", "horrorizado", "indiferente",
+    "asombrado", "horrorizado", "indiferente", "insano"
     # ── Comandos de juego ───────────────────────
     "inventario", "equipo", "estadisticas",
     "habilidades", "talentos", "perks",
