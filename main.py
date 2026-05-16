@@ -62,7 +62,7 @@ SEPARATOR_THICK = f"{Color.BLUE}{'═' * 60}{Color.RESET}"
 def print_header():
     print(f"{Color.BLUE}{Color.BOLD}")
     print("  ╔══════════════════════════════════════════════════════╗")
-    print("  ║       🎮  CHAT RPG  ─  Sistema de Autocompletado      ║")
+    print("  ║         CHAT RPG  ─  Sistema de Autocompletado       ║")
     print("  ╚══════════════════════════════════════════════════════╝")
     print(Color.RESET)
 

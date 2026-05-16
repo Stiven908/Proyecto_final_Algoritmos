@@ -136,6 +136,7 @@ RPG_VOCABULARY = [
     "vampiro", "vampiros", "wight",
     "banshee", "wraith", "poltergeist",
     "aboleth", "beholder", "mindflayer",
+    "incel", "papuloco","diler", "woman"
     # ── Acciones de chat ────────────────────────
     "atacar", "defender", "huir", "escapar",
     "negociar", "comerciar", "hablar", "dialogar",
@@ -222,7 +223,9 @@ RPG_VOCABULARY = [
     "desesperado", "determinado", "resignado",
     "furioso", "calmado", "sereno",
     "alegre", "triste", "melancólico",
-    "asombrado", "horrorizado", "indiferente", "insano"
+    "asombrado", "horrorizado", "indiferente", "insano",
+    "agradecido"
+
     # ── Comandos de juego ───────────────────────
     "inventario", "equipo", "estadisticas",
     "habilidades", "talentos", "perks",
