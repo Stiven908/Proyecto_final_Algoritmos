@@ -5,11 +5,11 @@ Vocabulario RPG (~1200 palabras) para el sistema de autocompletado.
 
 BLACKLIST_WORDS = [
     "idiota", "estupido","estupida" , "maldita", "mierda", "basura",
-    "imbecil", "pendejo","pendeja", "cabron","cabrona", "puta",
+    "imbecil", "pendejo","pendeja", "cabron","cabrona", "puta", "tetas"
     "inutil", "animal", "bestia", "hitler", "nigga", "prostituta",
     "prostituto", "vagina", "pussy", "pene", "dick", "rape", "bitch",
-    "malparido", "malparida", "67", "six", "sevem", "sixseven", "coito",
-    "sex", "sexo", "sexo2", "Trabajo", "chamba", "job", "agarrar la pala",
+    "malparido", "malparida", "67", "six", "seven", "sixseven", "coito",
+    "sex", "sexo", "sexo2", "Trabajo", "chamba", "job", "agarrar la pala", "culos", "culo",
     
 ]
 
@@ -33,7 +33,7 @@ RPG_VOCABULARY = [
     "orco", "orca", "troll", "hada", "fairy", "dragones", "draconido",
     "licántropo", "vampiro", "vampira", "semielfo", "semiorco",
     "tiefling", "aarakocra", "genasi", "goliath", "triton",
-    "dríada", "oni", "yokai", "djinn", "efrit", "wendigo", "leshen",
+    "dríada", "oni", "yokai", "djinn", "efrit", "wendigo", "leshen", "otaku",
     # ── Habilidades y magia ──────────────────────
     "ataque", "ataques", "atacar", "atacante", "atacantes",
     "defensa", "defender", "defensas", "defensivo", "defensiva",
@@ -87,7 +87,7 @@ RPG_VOCABULARY = [
     "maná oscuro", "esencia vital",
     "esencia demoníaca", "esencia celestial",
     "afinidad oscura", "afinidad luminosa",
-    "corrupción ancestral",
+    "corrupción ancestral", "azar",
     # ── Misiones y mundo ────────────────────────
     "mision", "misiones", "quest", "aventura", "aventuras",
     "dungeon", "mazmorra", "mazmorras", "cueva", "cuevas",
@@ -96,18 +96,18 @@ RPG_VOCABULARY = [
     "bosque", "bosques", "selva", "selvas",
     "montaña", "montañas", "volcan", "volcanes",
     "desierto", "desiertos", "llanura", "llanuras",
-    "oceano", "mar", "rio", "lago",
-    "isla", "islas", "archipelago",
-    "guarida", "guaridas", "escondite",
-    "templo", "templos", "santuario",
-    "taberna", "posada", "mercado",
-    "mapa", "mapas", "brujula", "tesoro",
-    "cofre", "cofres", "llave", "llaves",
+    "oceano", "mar", "rio", "lago", "charco", 
+    "isla", "islas", "archipelago", "caño",
+    "guarida", "guaridas", "escondite", 
+    "templo", "templos", "santuario", "sinagoga"
+    "taberna", "posada", "mercado", "ara", "olimplica"
+    "mapa", "mapas", "brujula", "tesoro", "one piece",
+    "cofre", "cofres", "llave", "llaves", 
     "trampa", "trampas", "tramposo", "exploración profunda",
-    "escalera", "puerta", "puertas",
-    "pasadizo", "laberinto", "travesía",
+    "escalera", "puerta", "puertas", "casino", "poker", "blackjack",
+    "pasadizo", "laberinto", "travesía", "ruleta", 
     "recompensa", "recompensas", "incursión"
-    "experiencia", "nivel", "niveles",
+    "experiencia", "nivel", "niveles", "apuestas"
     "puntos", "punto", "puntaje", "expedición",
     "dinero", "monedas", "moneda", "oro", "plata",
     "gemas", "gema", "diamante", "rubi", "asedio",
@@ -119,9 +119,9 @@ RPG_VOCABULARY = [
     "alianza", "alianzas", "aliado", "observatorio", "biblioteca arcana",
     "enemigo", "enemigos", "rival", "embarcadero", "puerto", "astillero",
     "jefe", "jefes", "boss", "fortín", "cripta", "catacumba",
-    "minijefe", "subje", "necrópolis antigua", "acantilado",
+    "minijefe", "subjefe", "necrópolis antigua", "acantilado",
     "horda", "hordas", "ejercito", "tundra", "pantano", "ciénaga",
-    "gremio", "gremios", "clan", "clanes",
+    "gremio", "gremios", "clan", "clanes", "clancito", 
     "faccion", "facciones", "paramo", "oasis", "arrecife",
     "reputacion", "fama", "infamia", "fiordo", "península", "barranco",
     "titulo", "titulos", "rango", "riscos", "coliseo", "anfiteatro",
@@ -129,12 +129,12 @@ RPG_VOCABULARY = [
     "dragon", "dragones", "wyvern", "basilisco",
     "hidra", "quimera", "grifo", "grifos",
     "fenix", "unicornio", "pegaso", "revenant", "aberración",
-    "golem", "golems", "automata",
+    "golem", "golems", "automata", "androide", "alien", 
     "esqueleto", "esqueletos", "zombie", "zombies",
     "fantasma", "fantasmas", "espectro",
     "demonio", "demonios", "diablo", "gólem ígneo", "gólem glacial",
-    "angel", "angeles", "serafin",
-    "gigante", "gigantes", "ciclope",
+    "angel", "angeles", "serafin", "ufo", 
+    "gigante", "gigantes", "ciclope", 
     "sirena", "sirenas", "tritón",
     "kraken", "leviatan", "behemot",
     "goblin", "goblins", "trasgo", "acechador", "devorador",
@@ -145,11 +145,12 @@ RPG_VOCABULARY = [
     "lobo", "lobos", "oso", "bestia",
     "slime", "slimes", "gelatina", "dracoliche", "necrófago", "ghoul",
     "elemental", "elementales", "roc", "ent", "gólem pétreo",
-    "demogorgon", "lich", "liches",
+    "demogorgon", "lich", "liches", "dealer", "malvado dealer", 
     "vampiro", "vampiros", "wight",
     "banshee", "wraith", "poltergeist",
     "aboleth", "beholder", "mindflayer",
-    "incel", "papuloco","diler", "woman"
+    "incel", "papuloco","diler", "woman",
+    "Meowscarada",
     # ── Acciones de chat ────────────────────────
     "atacar", "defender", "huir", "escapar",
     "negociar", "comerciar", "hablar", "dialogar",
@@ -175,8 +176,9 @@ RPG_VOCABULARY = [
     "rastrear", "seguir", "perseguir",
     "interrogar", "torturar", "liberar",
     "celebrar", "festejar", "desafiar",
-    "duelo", "torneo", "competir",
-    "saquear", "devastar", "ejecutar",
+    "duelo", "torneo", "competir", "llorar", 
+    "saquear", "devastar", "ejecutar", "no", "si",
+    "negar", "confirmar", "deducir", "aplacar", "maquinar", 
 
     # ── Estadísticas ────────────────────────────
     "salud", "vida", "puntos de vida", "hp",
@@ -202,7 +204,7 @@ RPG_VOCABULARY = [
     "soldado", "soldados", "guardia",
     "mercenario", "mercenarios",
     "asesino", "asesina", "espía",
-    "buscador", "buscadora",
+    "buscador", "buscadora","dioskamigod",
     "viajero", "viajera", "emperador", "emperatriz", "soberano",
     "sabio", "oraculo", "profeta", "soberana", "heraldo", "inquisidor",
     "hechicero oscuro", "archimago", "inquisidora", "estratega",
@@ -218,25 +220,25 @@ RPG_VOCABULARY = [
     "espadón", "mandoble", "estoque","espada legendaria", "espada del destino",
     "escudo sagrado", "armadura dragon", "cimitarra", "alabarda", "mangual",
     "baston del archimago", "libro de hechizos", "ballesta", "virote", "carcaj",
-    "katana", "nodachi", "wakizashi", "tridente", "guadaña", "cetro",
+    "katana", "nodachi", "wakizashi", "tridente", "guadaña", "cetro", "rifle spartan"
     "grimorio", "tomo", "pergamino", "reliquiario", "filacteria", "relicario",
     "cristal magico", "orbe", "varita", "grimorio ancestral", "tomo prohibido",
     "pocion de fuerza", "pocion curacion", "emblema", "estandarte", "blasón",
     "pocion invisibilidad", "pocion veneno", "báculo", "medallón", "brazales",
     "elixir", "antidoto", "contraveneno", "acero valyrio", "pergamino prohibido",
-    "anillo magico", "collar encantado", "diario arcano", "runario",
+    "anillo magico", "collar encantado", "diario arcano", "runario", "Aguijoneador"
     "brazalete poder", "cinto fuerza", "adamantita", "hierro negro", "acero rúnico",
     "capa invisibilidad", "botas velocidad", "hombreras", "grebas", "pechera",
-    "guantes destreza", "yelmo sabiduria", "insignia imperial",
+    "guantes destreza", "yelmo sabiduria", "insignia imperial", "dmr", "totem de la imortalidad",
     "llave maestra", "mapa del tesoro", "cristal etéreo", "obsidiana", "mithril",
-    "brujula magica", "catalejo", "reliquia ancestral", "gema astral",
+    "brujula magica", "catalejo", "reliquia ancestral", "gema astral", "Manzana de Notch", 
     "espejo verdad", "bola de cristal", "códice", "bestiario", "manuscrito",
-    "peto", "visor", "coraza", "gargantilla",
+    "peto", "visor", "coraza", "gargantilla", "Jetpack", "moto", "carro", "submarino"
     # ── Emociones y roleplay ─────────────────────
     "valiente", "cobarde", "temerario",
     "sabio", "impulsivo", "calculador",
-    "leal", "traicionero", "honesto",
-    "cruel", "amable", "misericordioso",
+    "leal", "traicionero", "honesto", "resentido", 
+    "cruel", "amable", "misericordioso", "ansioso", 
     "curioso", "desconfiado", "esperanzador",
     "desesperado", "determinado", "resignado", "audaz", "estoico", "errante",
     "furioso", "calmado", "sereno", "nómada", "taciturno",
@@ -251,27 +253,27 @@ RPG_VOCABULARY = [
     "mítico", "épico",
     "inmortal", "imperecedero",
     "omnisciente", "omnipotente",
-    "incorruptible"
+    "incorruptible", "mamalon"
     # ── Comandos de juego ───────────────────────
     "inventario", "equipo", "estadisticas",
     "habilidades", "talentos", "perks",
     "registro", "diario", "bitacora",
     "configuracion", "opciones", "pausa",
     "guardar", "cargar", "nuevo juego",
-    "tutorial", "ayuda", "pistas",
+    "tutorial", "ayuda", "pistas", "Battlepass",
     "logros", "medallas", "trofeos",
     "ranking", "tabla", "clasificacion",
     "multijugador", "cooperativo", "competitivo",
-    "servidor", "sala", "lobby",
+    "servidor", "sala", "lobby", "Microtransacción"
     "chat", "mensaje", "mensajes",
-    "emote", "reaccion", "emoji",
+    "emote", "reaccion", "emoji", "loot boxes", 
     "susurro", "gritar", "hablar normal",
-    "grupo", "partido", "equipo",
+    "grupo", "partido", "equipo", "Bracket",
     "lider", "comandante", "capitan",
-    "unirse", "salir", "expulsar",
+    "unirse", "salir", "expulsar", "bannear"
     "invitar", "aceptar", "rechazar",
     "amigos", "lista de amigos", "bloquear",
-    "ignorar", "reportar", "denunciar",
+    "ignorar", "reportar", "denunciar", "volumen", "bloquear", 
 ]
 
 # Eliminar duplicados y ordenar
