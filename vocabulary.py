@@ -5,7 +5,7 @@ Vocabulario RPG (~1200 palabras) para el sistema de autocompletado.
 
 BLACKLIST_WORDS = [
     "idiota", "estupido","estupida" , "maldita", "mierda", "basura",
-    "imbecil", "pendejo","pendeja", "cabron","cabrona", "puta", "tetas"
+    "imbecil", "pendejo","pendeja", "cabron","cabrona", "puta", "tetas",
     "inutil", "animal", "bestia", "hitler", "nigga", "prostituta",
     "prostituto", "vagina", "pussy", "pene", "dick", "rape", "bitch",
     "malparido", "malparida", "67", "six", "seven", "sixseven", "coito",
@@ -220,7 +220,7 @@ RPG_VOCABULARY = [
     "espadón", "mandoble", "estoque","espada legendaria", "espada del destino",
     "escudo sagrado", "armadura dragon", "cimitarra", "alabarda", "mangual",
     "baston del archimago", "libro de hechizos", "ballesta", "virote", "carcaj",
-    "katana", "nodachi", "wakizashi", "tridente", "guadaña", "cetro", "rifle spartan"
+    "katana", "nodachi", "wakizashi", "tridente", "guadaña", "cetro", "rifle spartan",
     "grimorio", "tomo", "pergamino", "reliquiario", "filacteria", "relicario",
     "cristal magico", "orbe", "varita", "grimorio ancestral", "tomo prohibido",
     "pocion de fuerza", "pocion curacion", "emblema", "estandarte", "blasón",

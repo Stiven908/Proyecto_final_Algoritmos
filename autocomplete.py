@@ -6,6 +6,7 @@
 import time
 import sys
 import os
+import re
 
 # COLORES ANSI para consola
 class Color:
@@ -211,6 +212,27 @@ class Blacklist:
 
     def filter(self, words: list[str]) -> list[str]:
         return [w for w in words if not self.contains(w)]
+    
+    def censor_text(self, text: str) -> str:
+        """
+        Reemplaza palabras prohibidas por #.
+        """
+
+        words = text.split()
+
+        censored = []
+
+        for word in words:
+
+            # limpiar signos para comparar
+            clean = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ]', '', word).lower()
+
+            if self.contains(clean):
+                censored.append("#" * len(word))
+            else:
+                censored.append(word)
+
+        return " ".join(censored)
 
 
 # MOTOR DE AUTOCOMPLETADO
@@ -229,7 +251,9 @@ class AutocompleteEngine:
         for word in vocabulary:
             self.tree.insert(word)
         self._build_time = time.perf_counter() - t0
-
+    def censor_message(self, text: str) -> str:
+        return self.blacklist.censor_text(text)
+    
     def suggest(self, prefix: str, max_results: int = 8) -> tuple[list[str], float]:
         """
         Devuelve sugerencias filtradas y el tiempo de búsqueda en ms.

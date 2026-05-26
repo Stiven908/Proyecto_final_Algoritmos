@@ -193,6 +193,7 @@ def run_chat(engine: AutocompleteEngine):
         history.append((npc, reply))
         npc_idx += 1
 
+
     # Bucle de entrada
     clear_screen()
     print_header()
@@ -221,7 +222,12 @@ def run_chat(engine: AutocompleteEngine):
                 selected_idx  = -1
                 suggestions   = []
             elif current_input.strip():
-                send_message(current_input.strip())
+                 # Censura el mensaje
+
+                clean_message = engine.censor_message(current_input.strip())
+                # Enviar mensaje
+
+                send_message(clean_message)
                 current_input = ""
                 selected_idx  = -1
                 suggestions   = []
@@ -264,7 +270,7 @@ def run_chat(engine: AutocompleteEngine):
 def main():
     print(f"\n{Color.CYAN}Cargando vocabulario RPG...{Color.RESET}")
     engine = AutocompleteEngine(RPG_VOCABULARY, BLACKLIST_WORDS)
-    print(f"{Color.GREEN}✔ Árbol Rojinegro construido con "
+    print(f"{Color.GREEN} Árbol Rojinegro construido con "
           f"{engine.vocab_size} palabras en {engine.build_time_ms:.2f} ms{Color.RESET}")
     time.sleep(0.8)
     run_chat(engine)
