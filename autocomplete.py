@@ -1,15 +1,17 @@
 """
- Sistema de Autocompletado para Chat RPG
- Estructura: Árbol Rojinegro y Búsqueda Binaria
+Sistema de Autocompletado para Chat RPG
+Estructuras: Árbol Rojinegro y Búsqueda Binaria
 """
 
-import time
-import sys
-import os
 import re
+import time
+import bisect
+from enum import Enum
 
-# COLORES ANSI para consola
-class Color:
+
+# ── Colores ANSI ─────────────────────────────────────────────────────────────
+
+class Color(str, Enum):
     RESET   = "\033[0m"
     BOLD    = "\033[1m"
     RED     = "\033[91m"
@@ -20,103 +22,88 @@ class Color:
     BLUE    = "\033[94m"
     GRAY    = "\033[90m"
     WHITE   = "\033[97m"
-    BG_DARK = "\033[40m"
+
+    def __str__(self) -> str:
+        return self.value
+
 
 def bold_match(word: str, prefix: str) -> str:
-    """
-    Resalta en negrilla+color las letras que coinciden con el prefijo.
-    El resto de la palabra se muestra en gris.
-    """
+    """Resalta en cian+negrilla las letras que coinciden con el prefijo."""
     n = len(prefix)
-    matched  = word[:n]
-    rest     = word[n:]
+    matched = word[:n]
+    rest    = word[n:]
     return f"{Color.CYAN}{Color.BOLD}{matched}{Color.RESET}{Color.GRAY}{rest}{Color.RESET}"
 
 
-# ÁRBOL ROJINEGRO
-RED   = True
-BLACK = False
+# ── Árbol Rojinegro ───────────────────────────────────────────────────────────
 
-class RBNode:
-    """Nodo del Árbol Rojinegro."""
+_RED   = True
+_BLACK = False
+
+
+class _RBNode:
+    """Nodo interno del Árbol Rojinegro."""
+
     __slots__ = ("key", "color", "left", "right", "parent")
 
-    def __init__(self, key: str, color: bool = RED):
+    def __init__(self, key: str, color: bool = _RED):
         self.key    = key
         self.color  = color
-        self.left   = None
-        self.right  = None
-        self.parent = None
+        self.left:   "_RBNode | None" = None
+        self.right:  "_RBNode | None" = None
+        self.parent: "_RBNode | None" = None
 
 
 class RedBlackTree:
     """
-    Árbol Rojinegro autobalanceado.
+    Árbol Rojinegro autobalanceado para búsqueda de prefijos en O(log n).
+
+    Uso:
+        tree = RedBlackTree()
+        tree.insert("espada")
+        resultados = tree.search_prefix("esp")   # ["espada", ...]
     """
 
     def __init__(self):
-        # Centinela NIL (hoja negra)
-        self.NIL = RBNode("", BLACK)
-        self.NIL.left  = self.NIL
-        self.NIL.right = self.NIL
-        self.root = self.NIL
+        # Centinela NIL: hoja negra compartida por todos los nodos
+        self._nil = _RBNode("", _BLACK)
+        self._nil.left  = self._nil
+        self._nil.right = self._nil
+        self._root = self._nil
         self._size = 0
 
-    # Rotaciones
-    def _rotate_left(self, x: RBNode):
-        y = x.right
-        x.right = y.left
-        if y.left is not self.NIL:
-            y.left.parent = x
-        y.parent = x.parent
-        if x.parent is None:
-            self.root = y
-        elif x is x.parent.left:
-            x.parent.left = y
-        else:
-            x.parent.right = y
-        y.left   = x
-        x.parent = y
+    # ── Propiedades públicas ──────────────────────────────────────────────────
 
-    def _rotate_right(self, y: RBNode):
-        x = y.left
-        y.left = x.right
-        if x.right is not self.NIL:
-            x.right.parent = y
-        x.parent = y.parent
-        if y.parent is None:
-            self.root = x
-        elif y is y.parent.right:
-            y.parent.right = x
-        else:
-            y.parent.left = x
-        x.right  = y
-        y.parent = x
+    @property
+    def size(self) -> int:
+        return self._size
 
-    # Inserción
-    def insert(self, key: str):
-        """Inserta una clave."""
+    # ── Inserción ─────────────────────────────────────────────────────────────
+
+    def insert(self, key: str) -> None:
+        """Inserta una clave (normalizada a minúsculas). Ignora duplicados."""
         key = key.lower()
-        node = RBNode(key)
-        node.left   = self.NIL
-        node.right  = self.NIL
+
+        node = _RBNode(key)
+        node.left   = self._nil
+        node.right  = self._nil
         node.parent = None
 
-        parent = None
-        current = self.root
+        parent:  "_RBNode | None" = None
+        current: "_RBNode"        = self._root
 
-        while current is not self.NIL:
+        while current is not self._nil:
             parent = current
             if key < current.key:
                 current = current.left
             elif key > current.key:
                 current = current.right
             else:
-                return  # duplicado, no insertar
+                return  # duplicado — no insertar
 
         node.parent = parent
         if parent is None:
-            self.root = node
+            self._root = node
         elif key < parent.key:
             parent.left = node
         else:
@@ -125,147 +112,198 @@ class RedBlackTree:
         self._size += 1
         self._fix_insert(node)
 
-    def _fix_insert(self, z: RBNode):
-        while z.parent and z.parent.color == RED:
-            if z.parent is z.parent.parent.left:
-                y = z.parent.parent.right
-                if y.color == RED:
-                    z.parent.color         = BLACK
-                    y.color                = BLACK
-                    z.parent.parent.color  = RED
-                    z = z.parent.parent
+    def _fix_insert(self, z: _RBNode) -> None:
+        while z.parent and z.parent.color == _RED:
+            gp = z.parent.parent
+            if z.parent is gp.left:
+                uncle = gp.right
+                if uncle.color == _RED:                  # Caso 1
+                    z.parent.color = _BLACK
+                    uncle.color    = _BLACK
+                    gp.color       = _RED
+                    z = gp
                 else:
-                    if z is z.parent.right:
+                    if z is z.parent.right:              # Caso 2
                         z = z.parent
                         self._rotate_left(z)
-                    z.parent.color        = BLACK
-                    z.parent.parent.color = RED
-                    self._rotate_right(z.parent.parent)
+                    z.parent.color = _BLACK              # Caso 3
+                    gp.color       = _RED
+                    self._rotate_right(gp)
             else:
-                y = z.parent.parent.left
-                if y.color == RED:
-                    z.parent.color        = BLACK
-                    y.color               = BLACK
-                    z.parent.parent.color = RED
-                    z = z.parent.parent
+                uncle = gp.left
+                if uncle.color == _RED:                  # Caso 1 (simétrico)
+                    z.parent.color = _BLACK
+                    uncle.color    = _BLACK
+                    gp.color       = _RED
+                    z = gp
                 else:
-                    if z is z.parent.left:
+                    if z is z.parent.left:               # Caso 2 (simétrico)
                         z = z.parent
                         self._rotate_right(z)
-                    z.parent.color        = BLACK
-                    z.parent.parent.color = RED
-                    self._rotate_left(z.parent.parent)
-        self.root.color = BLACK
+                    z.parent.color = _BLACK              # Caso 3 (simétrico)
+                    gp.color       = _RED
+                    self._rotate_left(gp)
+        self._root.color = _BLACK
 
-    # Búsqueda por prefijo
+    # ── Rotaciones ────────────────────────────────────────────────────────────
+
+    def _rotate_left(self, x: _RBNode) -> None:
+        y = x.right
+        x.right = y.left
+        if y.left is not self._nil:
+            y.left.parent = x
+        y.parent = x.parent
+        if x.parent is None:
+            self._root = y
+        elif x is x.parent.left:
+            x.parent.left = y
+        else:
+            x.parent.right = y
+        y.left   = x
+        x.parent = y
+
+    def _rotate_right(self, y: _RBNode) -> None:
+        x = y.left
+        y.left = x.right
+        if x.right is not self._nil:
+            x.right.parent = y
+        x.parent = y.parent
+        if y.parent is None:
+            self._root = x
+        elif y is y.parent.right:
+            y.parent.right = x
+        else:
+            y.parent.left = x
+        x.right  = y
+        y.parent = x
+
+    # ── Búsqueda por prefijo ──────────────────────────────────────────────────
+
     def search_prefix(self, prefix: str, max_results: int = 10) -> list[str]:
         """
-        Devuelve hasta `max_results` palabras que empiezan con `prefix`.
-        Orden: alfabético (in-order).
+        Devuelve hasta `max_results` palabras que empiezan con `prefix`,
+        en orden alfabético (recorrido in-order).
         """
-        prefix = prefix.lower()
+        prefix  = prefix.lower()
         results: list[str] = []
-        self._search_prefix_helper(self.root, prefix, results, max_results)
+        self._collect_prefix(self._root, prefix, results, max_results)
         return results
 
-    def _search_prefix_helper(self, node: RBNode, prefix: str, results: list, max_results: int):
-        if node is self.NIL or len(results) >= max_results:
+    def _collect_prefix(
+        self,
+        node: _RBNode,
+        prefix: str,
+        results: list[str],
+        max_results: int,
+    ) -> None:
+        if node is self._nil or len(results) >= max_results:
             return
+
+        # Determinar si puede haber coincidencias en el subárbol izquierdo:
+        # sí cuando la clave actual es mayor que el prefijo (alfabéticamente
+        # puede haber claves menores que sí coincidan).
         if node.key > prefix:
-            # Puede haber coincidencias en el subárbol izquierdo
-            self._search_prefix_helper(node.left, prefix, results, max_results)
+            self._collect_prefix(node.left, prefix, results, max_results)
+
         if len(results) >= max_results:
             return
+
+        # Evaluar el nodo actual
         if node.key.startswith(prefix):
             results.append(node.key)
-        if node.key <= prefix or node.key.startswith(prefix):
-            self._search_prefix_helper(node.right, prefix, results, max_results)
 
-    @property
-    def size(self) -> int:
-        return self._size
+        # Siempre explorar el subárbol derecho cuando la clave actual
+        # empieza con el prefijo O es menor que él: puede haber más
+        # coincidencias con prefijos más largos a la derecha.
+        if node.key < prefix or node.key.startswith(prefix):
+            self._collect_prefix(node.right, prefix, results, max_results)
 
 
-# LISTA NEGRA (búsqueda binaria)
+# ── Lista Negra ───────────────────────────────────────────────────────────────
+
 class Blacklist:
     """
-    Lista negra de palabras ofensivas.
-    Búsqueda binaria: O(log n)
+    Lista negra de palabras prohibidas con búsqueda binaria en O(log n).
+
+    Uso:
+        bl = Blacklist(["malo", "feo"])
+        bl.contains("malo")          # True
+        bl.filter(["hola", "malo"])  # ["hola"]
+        bl.censor_text("hola malo")  # "hola ####"
     """
 
     def __init__(self, words: list[str]):
-        self._words = sorted(w.lower() for w in words)
+        # bisect requiere lista ordenada
+        self._words: list[str] = sorted(w.lower() for w in words)
 
     def contains(self, word: str) -> bool:
-        """Búsqueda binaria."""
+        """Búsqueda binaria: True si la palabra está en la lista negra."""
         target = word.lower()
-        lo, hi = 0, len(self._words) - 1
-        while lo <= hi:
-            mid = (lo + hi) // 2
-            if self._words[mid] == target:
-                return True
-            elif self._words[mid] < target:
-                lo = mid + 1
-            else:
-                hi = mid - 1
-        return False
+        idx    = bisect.bisect_left(self._words, target)
+        return idx < len(self._words) and self._words[idx] == target
 
     def filter(self, words: list[str]) -> list[str]:
+        """Devuelve la lista sin las palabras prohibidas."""
         return [w for w in words if not self.contains(w)]
-    
+
     def censor_text(self, text: str) -> str:
         """
-        Reemplaza palabras prohibidas por #.
+        Reemplaza cada palabra prohibida por una cadena de '#'
+        del mismo largo que el token original (incluyendo signos).
         """
+        tokens = text.split()
+        result = []
+        for token in tokens:
+            clean = re.sub(r"[^a-zA-ZáéíóúÁÉÍÓÚñÑ]", "", token).lower()
+            result.append("#" * len(token) if self.contains(clean) else token)
+        return " ".join(result)
 
-        words = text.split()
-
-        censored = []
-
-        for word in words:
-
-            # limpiar signos para comparar
-            clean = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ]', '', word).lower()
-
-            if self.contains(clean):
-                censored.append("#" * len(word))
-            else:
-                censored.append(word)
-
-        return " ".join(censored)
+    def __len__(self) -> int:
+        return len(self._words)
 
 
-# MOTOR DE AUTOCOMPLETADO
+# ── Motor de Autocompletado ───────────────────────────────────────────────────
+
 class AutocompleteEngine:
-
     """
-    Todavia no funciona muy bien y no se porque
-    Motor principal que integra el Árbol Rojinegro y la Lista Negra.
+    Integra el Árbol Rojinegro y la Lista Negra en un único motor.
+
+    Uso:
+        engine = AutocompleteEngine(vocabulario, palabras_prohibidas)
+        sugerencias, ms = engine.suggest("esp")
+        mensaje_limpio  = engine.censor_message("texto con malas palabras")
     """
 
     def __init__(self, vocabulary: list[str], blacklist_words: list[str]):
-        self.tree      = RedBlackTree()
         self.blacklist = Blacklist(blacklist_words)
+        self.tree      = RedBlackTree()
 
         t0 = time.perf_counter()
         for word in vocabulary:
             self.tree.insert(word)
         self._build_time = time.perf_counter() - t0
-    def censor_message(self, text: str) -> str:
-        return self.blacklist.censor_text(text)
-    
+
+    # ── API pública ───────────────────────────────────────────────────────────
+
     def suggest(self, prefix: str, max_results: int = 8) -> tuple[list[str], float]:
         """
-        Devuelve sugerencias filtradas y el tiempo de búsqueda en ms.
+        Devuelve (sugerencias_filtradas, tiempo_en_ms).
+        Las sugerencias están en orden alfabético y no contienen
+        palabras de la lista negra.
         """
-        if not prefix:
+        if not prefix.strip():
             return [], 0.0
 
-        t0 = time.perf_counter()
+        t0       = time.perf_counter()
         raw      = self.tree.search_prefix(prefix, max_results * 2)
         filtered = self.blacklist.filter(raw)[:max_results]
         elapsed  = (time.perf_counter() - t0) * 1000
         return filtered, elapsed
+
+    def censor_message(self, text: str) -> str:
+        return self.blacklist.censor_text(text)
+
+    # ── Propiedades informativas ──────────────────────────────────────────────
 
     @property
     def vocab_size(self) -> int:

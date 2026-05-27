@@ -1,277 +1,335 @@
 #!/usr/bin/env python3
 """
-  Controles:
-    TAB          Seleccionar siguiente sugerencia
-    SHIFT+TAB    Seleccionar sugerencia anterior
-    ENTER        Enviar mensaje / Confirmar sugerencia
-    ESC          Cancela sugerencia
-    CTRL+C       Sali
+Chat RPG — Sistema de Autocompletado
+=====================================
+Controles:
+  TAB          Seleccionar siguiente sugerencia
+  SHIFT+TAB    Seleccionar sugerencia anterior
+  ENTER        Enviar mensaje / Confirmar sugerencia seleccionada
+  ESC          Cancelar sugerencia activa
+  BACKSPACE    Borrar último carácter
+  CTRL+C       Salir
 """
 
-import sys
 import os
+import sys
 import time
 import platform
 
-# Importar módulos del proyecto
 sys.path.insert(0, os.path.dirname(__file__))
+
 from autocomplete import AutocompleteEngine, Color, bold_match
 from vocabulary   import RPG_VOCABULARY, BLACKLIST_WORDS
 
-# Detectar SO para lectura de teclado
+# ── Compatibilidad de teclado (Windows solamente) ─────────────────────────────
+
 IS_WINDOWS = platform.system() == "Windows"
 
 if IS_WINDOWS:
     import msvcrt
 
-def _read_key_windows():
-    """Lee una tecla en Windows."""
-    ch = msvcrt.getwch()
-    if ch in ("\x00", "\xe0"):
-        ch2 = msvcrt.getwch()
-        return "WIN_" + ch2
-    return ch
+    def read_key() -> str:
+        """Lee una tecla raw en Windows."""
+        ch = msvcrt.getwch()
+        if ch in ("\x00", "\xe0"):          # tecla especial de dos bytes
+            return "WIN_" + msvcrt.getwch()
+        return ch
+else:
+    def read_key() -> str:                  # type: ignore[misc]
+        raise RuntimeError("Este programa solo está soportado en Windows.")
 
 
-def read_key():
-    if IS_WINDOWS:
-        return _read_key_windows()
-    return _read_key_windows()
+# ── Constantes de UI ──────────────────────────────────────────────────────────
+
+SEP_THIN  = f"{Color.GRAY}{'─' * 60}{Color.RESET}"
+SEP_THICK = f"{Color.BLUE}{'═' * 60}{Color.RESET}"
+
+HISTORY_VISIBLE = 8   # cuántos mensajes recientes mostrar
 
 
-#  UI de ayuda
-def clear_screen():
-    os.system("cls" if IS_WINDOWS else "clear")
+# ── Estado del chat ───────────────────────────────────────────────────────────
 
-def move_up(n: int):
-    if n > 0:
-        print(f"\033[{n}A", end="", flush=True)
+class ChatState:
+    """
+    Contiene todo el estado mutable del chat en un único lugar.
+    Ninguna función de UI debería modificar el estado directamente;
+    debe pasar por los métodos de esta clase.
+    """
 
-def erase_line():
-    print("\033[2K\r", end="", flush=True)
+    def __init__(self, engine: AutocompleteEngine):
+        self.engine       = engine
+        self.history:     list[tuple[str, str]] = []
+        self.current_input = ""
+        self.suggestions:  list[str] = []
+        self.selected_idx: int       = -1
+        self.elapsed_ms:   float     = 0.0
+        self._npc_queue   = _build_npc_queue()
+        self._npc_index   = 0
 
-def erase_lines(n: int):
-    for _ in range(n):
-        erase_line()
-        if _ < n - 1:
-            move_up(1)
+    # ── Mutaciones ────────────────────────────────────────────────────────────
 
-SEPARATOR = f"{Color.GRAY}{'─' * 60}{Color.RESET}"
-SEPARATOR_THICK = f"{Color.BLUE}{'═' * 60}{Color.RESET}"
+    def append_char(self, ch: str) -> None:
+        self.current_input += ch
+        self.selected_idx   = -1
+        self._refresh_suggestions()
 
-def print_header():
-    print(f"{Color.BLUE}{Color.BOLD}")
-    print("  ╔══════════════════════════════════════════════════════╗")
-    print("  ║         CHAT RPG  ─  Sistema de Autocompletado       ║")
-    print("  ╚══════════════════════════════════════════════════════╝")
-    print(Color.RESET)
+    def delete_char(self) -> None:
+        self.current_input  = self.current_input[:-1]
+        self.selected_idx   = -1
+        self._refresh_suggestions()
 
-def print_info(engine: AutocompleteEngine):
-    print(f"  {Color.GRAY}Vocabulario: {Color.CYAN}{engine.vocab_size}{Color.GRAY} palabras  │"
-          f"  Árbol Rojinegro: O(log n)  │  Lista negra: {len(BLACKLIST_WORDS)} palabras{Color.RESET}")
-    print(f"  {Color.GRAY}Tiempo de construcción del árbol: "
-          f"{Color.YELLOW}{engine.build_time_ms:.2f} ms{Color.RESET}")
-    print(SEPARATOR)
-    print(f"  {Color.GRAY}TAB = siguiente sugerencia  │  SHIFT+TAB = anterior  │"
-          f"  ESC = cancelar  │  CTRL+C = salir{Color.RESET}")
-    print(SEPARATOR)
+    def next_suggestion(self) -> None:
+        if self.suggestions:
+            self.selected_idx = (self.selected_idx + 1) % len(self.suggestions)
 
-def print_chat_history(history: list[tuple[str, str]]):
-    """Imprime el historial de chat."""
-    if not history:
-        print(f"  {Color.GRAY}(El historial de chat aparecerá aquí...){Color.RESET}")
-        return
-    for sender, msg in history[-8:]:   # mostrar últimos 8
-        if sender == "tú":
-            print(f"  {Color.GREEN}{Color.BOLD}[Tú]{Color.RESET}  {Color.WHITE}{msg}{Color.RESET}")
-        else:
-            name_col = Color.MAGENTA if sender != "Sistema" else Color.YELLOW
-            print(f"  {name_col}{Color.BOLD}[{sender}]{Color.RESET}  {Color.GRAY}{msg}{Color.RESET}")
+    def prev_suggestion(self) -> None:
+        if self.suggestions:
+            self.selected_idx = (self.selected_idx - 1) % len(self.suggestions)
 
-def print_suggestions(suggestions: list[str], prefix: str,
-                      selected: int, elapsed_ms: float):
-    """Dibuja el panel de sugerencias."""
-    if not suggestions:
-        print(f"\n  {Color.GRAY}(sin sugerencias){Color.RESET}")
-        return
+    def accept_suggestion(self) -> None:
+        """Acepta la sugerencia seleccionada como texto actual (sin enviar)."""
+        if self.selected_idx >= 0 and self.suggestions:
+            self.current_input = self.suggestions[self.selected_idx]
+        self._clear_suggestions()
 
-    print(f"\n  {Color.YELLOW}💡 Sugerencias{Color.GRAY} "
-          f"[{elapsed_ms:.2f} ms]{Color.RESET}  "
-          f"{Color.GRAY}(TAB para navegar){Color.RESET}")
+    def cancel_suggestion(self) -> None:
+        self._clear_suggestions()
 
-    for i, word in enumerate(suggestions):
-        highlighted = bold_match(word, prefix)
-        if i == selected:
-            marker = f"{Color.BLUE}{Color.BOLD}▶{Color.RESET}"
-            bg     = f"{Color.BLUE}"
-            print(f"  {marker} {bg}{Color.BOLD}{word.upper()}{Color.RESET}"
-                  f"  {Color.GRAY}← seleccionada{Color.RESET}")
-        else:
-            num = f"{Color.GRAY}{i + 1}.{Color.RESET}"
-            print(f"    {num} {highlighted}")
+    def send_message(self) -> None:
+        """Censura y envía el mensaje actual; añade respuesta de NPC."""
+        text = self.current_input.strip()
+        if not text:
+            return
+        clean = self.engine.censor_message(text)
+        self.history.append(("tú", clean))
+
+        npc_name, npc_reply = self._npc_queue[self._npc_index % len(self._npc_queue)]
+        self.history.append((npc_name, npc_reply))
+        self._npc_index += 1
+
+        self.current_input = ""
+        self._clear_suggestions()
+
+    # ── Helpers privados ──────────────────────────────────────────────────────
+
+    def _refresh_suggestions(self) -> None:
+        self.suggestions, self.elapsed_ms = self.engine.suggest(self.current_input)
+        self.selected_idx = 0 if self.suggestions else -1
+
+    def _clear_suggestions(self) -> None:
+        self.suggestions  = []
+        self.selected_idx = -1
 
 
-#  BUCLE PRINCIPAL DEL CHAT
-def run_chat(engine: AutocompleteEngine):
-    history: list[tuple[str, str]] = [
-        ("Sistema", "¡Bienvenido al chat del reino! Escribe para comenzar."),
-        ("NPC1", "¡Saludos, aventurero! ¿Listo para la batalla?"),
-        ("NPC2", "Un mago nunca llega tarde... empieza a escribir."),
+def _build_npc_queue() -> list[tuple[str, str]]:
+    """Devuelve la lista de respuestas NPC en orden fijo."""
+    return [
+        ("NPC Guerrero",   "¡Por el reino! Buen movimiento."),
+        ("NPC Archimago",  "Fascinante elección, joven aventurero."),
+        ("NPC Arquera",    "Mi arco está listo. ¿Y el tuyo?"),
+        ("NPC Enano",      "¡Por las barbas de mi padre! ¡Vamos!"),
+        ("NPC Paladín",    "Debo ser valiente..."),
+        ("NPC Explorador", "Interesante... muy interesante."),
+        ("NPC Oráculo",    "Tu destino ya está escrito..."),
     ]
 
-    # NPC que responden al azar
-    npcs = [
-        ("NPC1",  "¡Por el reino! Buen movimiento."),
-        ("NPC3",  "Fascinante elección, joven aventurero."),
-        ("NPC3",  "Mi arco está listo. ¿Y el tuyo?"),
-        ("NPC4",    "¡Por las barbas de mi padre! ¡Vamos!"),
-        ("NPC5",    "Debo ser valiente..."),
-        ("NPC6",  "Interesante... muy interesante."),
-        ("NPC7",   "Tu destino ya está escrito..."),
-    ]
-    npc_idx = 0
 
-    current_input = ""
-    suggestions:  list[str] = []
-    selected_idx: int = -1
-    elapsed_ms:   float = 0.0
-    last_lines:   int = 0       #líneas que necesitamos borrar en el redibujado
+# ── Renderizado ───────────────────────────────────────────────────────────────
 
-    def redraw():
-        nonlocal last_lines
+class Renderer:
+    """
+    Responsable exclusivamente de pintar la UI en consola.
+    """
 
-        # Borrar lo que se dibujó antes
-        if last_lines > 0:
-            move_up(last_lines)
-            for _ in range(last_lines):
-                erase_line()
-                print()
-            move_up(last_lines)
+    def __init__(self):
+        self._last_lines = 0   # líneas pintadas en el ciclo anterior
+
+    # ── Pantalla completa (solo al inicio) ────────────────────────────────────
+
+    @staticmethod
+    def clear_screen() -> None:
+        os.system("cls" if IS_WINDOWS else "clear")
+
+    @staticmethod
+    def print_header() -> None:
+        print(f"{Color.BLUE}{Color.BOLD}")
+        print("  ╔══════════════════════════════════════════════════════╗")
+        print("  ║         CHAT RPG  ─  Sistema de Autocompletado       ║")
+        print("  ╚══════════════════════════════════════════════════════╝")
+        print(Color.RESET)
+
+    @staticmethod
+    def print_info(engine: AutocompleteEngine) -> None:
+        print(
+            f"  {Color.GRAY}Vocabulario: {Color.CYAN}{engine.vocab_size}{Color.GRAY} palabras  │"
+            f"  Árbol Rojinegro: O(log n)  │  Lista negra: {len(BLACKLIST_WORDS)} palabras{Color.RESET}"
+        )
+        print(
+            f"  {Color.GRAY}Tiempo de construcción del árbol: "
+            f"{Color.YELLOW}{engine.build_time_ms:.2f} ms{Color.RESET}"
+        )
+        print(SEP_THIN)
+        print(
+            f"  {Color.GRAY}TAB = siguiente  │  SHIFT+TAB = anterior  │"
+            f"  ESC = cancelar  │  CTRL+C = salir{Color.RESET}"
+        )
+        print(SEP_THIN)
+
+    # ── Redibujado incremental ────────────────────────────────────────────────
+
+    def redraw(self, state: ChatState) -> None:
+        """Borra las líneas del ciclo anterior y pinta el estado actual."""
+        self._erase_previous()
 
         lines = 0
 
         # Historial
-        print(SEPARATOR)
-        lines += 1
-        chat_lines = min(len(history), 8)
-        print_chat_history(history)
-        lines += max(chat_lines, 1)
-        print(SEPARATOR)
-        lines += 1
+        print(SEP_THIN);  lines += 1
+        chat_lines = self._print_history(state.history)
+        lines += chat_lines
+        print(SEP_THIN);  lines += 1
 
         # Sugerencias
-        if suggestions:
-            print_suggestions(suggestions, current_input, selected_idx, elapsed_ms)
-            lines += len(suggestions) + 2
-        else:
-            print(f"\n  {Color.GRAY}(escribe para ver sugerencias){Color.RESET}")
-            lines += 2
+        lines += self._print_suggestions(state)
 
-        # Prompt de escritura
+        # Línea de entrada
         print()
         lines += 1
-        prefix_display = ""
-        if selected_idx >= 0 and suggestions:
-            selected_word = suggestions[selected_idx]
-            prefix_display = (
-                f"{Color.CYAN}{Color.BOLD}{selected_word}{Color.RESET}"
+        self._print_prompt(state)
+        lines += 1
+
+        self._last_lines = lines
+
+    # ── Secciones privadas ────────────────────────────────────────────────────
+
+    def _print_history(self, history: list[tuple[str, str]]) -> int:
+        recent = history[-HISTORY_VISIBLE:]
+        if not recent:
+            print(f"  {Color.GRAY}(El historial de chat aparecerá aquí...){Color.RESET}")
+            return 1
+        for sender, msg in recent:
+            if sender == "tú":
+                print(f"  {Color.GREEN}{Color.BOLD}[Tú]{Color.RESET}  {Color.WHITE}{msg}{Color.RESET}")
+            elif sender == "Sistema":
+                print(f"  {Color.YELLOW}{Color.BOLD}[Sistema]{Color.RESET}  {Color.GRAY}{msg}{Color.RESET}")
+            else:
+                print(f"  {Color.MAGENTA}{Color.BOLD}[{sender}]{Color.RESET}  {Color.GRAY}{msg}{Color.RESET}")
+        return max(len(recent), 1)
+
+    def _print_suggestions(self, state: ChatState) -> int:
+        if not state.suggestions:
+            print(f"\n  {Color.GRAY}(escribe para ver sugerencias){Color.RESET}")
+            return 2
+
+        print(
+            f"\n  {Color.YELLOW}💡 Sugerencias{Color.GRAY} "
+            f"[{state.elapsed_ms:.2f} ms]{Color.RESET}  "
+            f"{Color.GRAY}(TAB para navegar){Color.RESET}"
+        )
+        for i, word in enumerate(state.suggestions):
+            if i == state.selected_idx:
+                print(
+                    f"  {Color.BLUE}{Color.BOLD}▶{Color.RESET} "
+                    f"{Color.BLUE}{Color.BOLD}{word.upper()}{Color.RESET}"
+                    f"  {Color.GRAY}← seleccionada{Color.RESET}"
+                )
+            else:
+                print(f"    {Color.GRAY}{i + 1}.{Color.RESET} {bold_match(word, state.current_input)}")
+        return len(state.suggestions) + 2
+
+    @staticmethod
+    def _print_prompt(state: ChatState) -> None:
+        if state.selected_idx >= 0 and state.suggestions:
+            selected = state.suggestions[state.selected_idx]
+            display  = (
+                f"{Color.CYAN}{Color.BOLD}{selected}{Color.RESET}"
                 f"{Color.GRAY} [TAB=siguiente · ENTER=aceptar · ESC=cancelar]{Color.RESET}"
             )
         else:
-            prefix_display = f"{Color.WHITE}{current_input}{Color.RESET}█"
+            display = f"{Color.WHITE}{state.current_input}{Color.RESET}█"
+        print(f"  {Color.GREEN}{Color.BOLD}Tú ›{Color.RESET}  {display}", end="", flush=True)
 
-        print(f"  {Color.GREEN}{Color.BOLD}Tú ›{Color.RESET}  {prefix_display}",
-              end="", flush=True)
-        lines += 1
+    # ── Utilidades de cursor ──────────────────────────────────────────────────
 
-        last_lines = lines
-
-    def send_message(text: str):
-        nonlocal npc_idx
-        history.append(("tú", text))
-        npc, reply = npcs[npc_idx % len(npcs)]
-        history.append((npc, reply))
-        npc_idx += 1
+    def _erase_previous(self) -> None:
+        if self._last_lines <= 0:
+            return
+        # Sube N líneas y luego borra todo desde el cursor hacia abajo.
+        # \033[{n}A  → subir n líneas
+        # \033[J     → borrar desde cursor hasta fin de pantalla
+        print(f"\033[{self._last_lines}A\033[J", end="", flush=True)
 
 
-    # Bucle de entrada
-    clear_screen()
-    print_header()
-    print_info(engine)
+# ── Bucle principal ───────────────────────────────────────────────────────────
+
+# Teclas especiales reconocidas
+_KEY_TAB        = "\t"
+_KEY_ENTER      = {"\r", "\n"}
+_KEY_ESC        = "\x1b"
+_KEY_CTRL_C     = "\x03"
+_KEY_CTRL_D     = "\x04"
+_KEY_BACKSPACE  = {"\x7f", "\x08", "WIN_\x08"}
+_KEY_SHIFT_TAB  = {"\x1b[Z", "ESC_[Z", "WIN_\x0f"}
+
+
+def run_chat(engine: AutocompleteEngine) -> None:
+    state    = ChatState(engine)
+    renderer = Renderer()
+
+    # Mensajes iniciales del sistema
+    state.history.extend([
+        ("Sistema",      "¡Bienvenido al chat del reino! Escribe para comenzar."),
+        ("NPC Guerrero", "¡Saludos, aventurero! ¿Listo para la batalla?"),
+        ("NPC Oráculo",  "Un mago nunca llega tarde... empieza a escribir."),
+    ])
+
+    Renderer.clear_screen()
+    Renderer.print_header()
+    Renderer.print_info(engine)
     print()
 
     while True:
-        redraw()
+        renderer.redraw(state)
         key = read_key()
 
-        #TAB: siguiente sugerencia
-        if key == "\t":
-            if suggestions:
-                selected_idx = (selected_idx + 1) % len(suggestions)
+        if key == _KEY_TAB:
+            state.next_suggestion()
 
-        #  SHIFT+TAB
-        elif key in ("\x1b[Z", "ESC_[Z", "WIN_\x0f"):
-            if suggestions:
-                selected_idx = (selected_idx - 1) % len(suggestions)
+        elif key in _KEY_SHIFT_TAB:
+            state.prev_suggestion()
 
-        # ENTER: enviar
-        elif key in ("\r", "\n"):
-            if selected_idx >= 0 and suggestions:
-                # Autocompletar con la palabra seleccionada
-                current_input = suggestions[selected_idx]
-                selected_idx  = -1
-                suggestions   = []
-            elif current_input.strip():
-                 # Censura el mensaje
+        elif key in _KEY_ENTER:
+            if state.selected_idx >= 0 and state.suggestions:
+                state.accept_suggestion()
+            else:
+                state.send_message()
 
-                clean_message = engine.censor_message(current_input.strip())
-                # Enviar mensaje
+        elif key == _KEY_ESC:
+            state.cancel_suggestion()
 
-                send_message(clean_message)
-                current_input = ""
-                selected_idx  = -1
-                suggestions   = []
-
-        # ESC: cancelar selección
-        elif key == "\x1b":
-            selected_idx = -1
-            suggestions  = []
-
-        #CTRL+C / CTRL+D: salir
-        elif key in ("\x03", "\x04"):
-            print(f"\n\n  {Color.YELLOW}Chao manito, todo bien!{Color.RESET}\n")
+        elif key in (_KEY_CTRL_C, _KEY_CTRL_D):
+            print(f"\n\n  {Color.YELLOW}¡Hasta la próxima, aventurero!{Color.RESET}\n")
             sys.exit(0)
 
-        # BACKSPACE
-        elif key in ("\x7f", "\x08", "WIN_\x08"):
-            current_input = current_input[:-1]
-            selected_idx  = -1
-            suggestions, elapsed_ms = engine.suggest(current_input)
-            if suggestions:
-                selected_idx = 0
+        elif key in _KEY_BACKSPACE:
+            state.delete_char()
 
-        # Caracteres normales
         elif len(key) == 1 and key.isprintable():
-            current_input += key
-            selected_idx = -1
+            state.append_char(key)
 
-            suggestions, elapsed_ms = engine.suggest(current_input)
-            if suggestions:
-                selected_idx = 0
-            else:
-                selected_idx = -1
-
-        #  Teclas de flecha (ignorar)
-        elif key.startswith("ESC_[") or key.startswith("WIN_"):
-            pass
+        # Teclas de flecha y otras secuencias especiales → ignorar
+        # (no hace falta una rama explícita; el while continúa)
 
 
-#  PUNTO DE ENTRADA
-def main():
+# ── Punto de entrada ──────────────────────────────────────────────────────────
+
+def main() -> None:
     print(f"\n{Color.CYAN}Cargando vocabulario RPG...{Color.RESET}")
     engine = AutocompleteEngine(RPG_VOCABULARY, BLACKLIST_WORDS)
-    print(f"{Color.GREEN} Árbol Rojinegro construido con "
-          f"{engine.vocab_size} palabras en {engine.build_time_ms:.2f} ms{Color.RESET}")
+    print(
+        f"{Color.GREEN}✔ Árbol Rojinegro construido con "
+        f"{engine.vocab_size} palabras en {engine.build_time_ms:.2f} ms{Color.RESET}"
+    )
     time.sleep(0.8)
     run_chat(engine)
 
