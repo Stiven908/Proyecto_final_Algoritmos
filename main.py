@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""
-Chat RPG — Sistema de Autocompletado
-=====================================
-Controles:
-  TAB          Seleccionar siguiente sugerencia
-  SHIFT+TAB    Seleccionar sugerencia anterior
-  ENTER        Enviar mensaje / Confirmar sugerencia seleccionada
-  ESC          Cancelar sugerencia activa
-  BACKSPACE    Borrar último carácter
-  CTRL+C       Salir
-"""
 
 import os
 import sys
@@ -19,7 +8,7 @@ import platform
 sys.path.insert(0, os.path.dirname(__file__))
 
 from autocomplete import AutocompleteEngine, Color, bold_match
-from vocabulary   import RPG_VOCABULARY, BLACKLIST_WORDS
+from vocabulary import RPG_VOCABULARY, BLACKLIST_WORDS
 
 # ── Compatibilidad de teclado (Windows solamente) ─────────────────────────────
 
@@ -28,23 +17,23 @@ IS_WINDOWS = platform.system() == "Windows"
 if IS_WINDOWS:
     import msvcrt
 
+
     def read_key() -> str:
         """Lee una tecla raw en Windows."""
         ch = msvcrt.getwch()
-        if ch in ("\x00", "\xe0"):          # tecla especial de dos bytes
+        if ch in ("\x00", "\xe0"):  # tecla especial de dos bytes
             return "WIN_" + msvcrt.getwch()
         return ch
 else:
-    def read_key() -> str:                  # type: ignore[misc]
+    def read_key() -> str:  # type: ignore[misc]
         raise RuntimeError("Este programa solo está soportado en Windows.")
-
 
 # ── Constantes de UI ──────────────────────────────────────────────────────────
 
-SEP_THIN  = f"{Color.GRAY}{'─' * 60}{Color.RESET}"
+SEP_THIN = f"{Color.GRAY}{'─' * 60}{Color.RESET}"
 SEP_THICK = f"{Color.BLUE}{'═' * 60}{Color.RESET}"
 
-HISTORY_VISIBLE = 8   # cuántos mensajes recientes mostrar
+HISTORY_VISIBLE = 8  # cuántos mensajes recientes mostrar
 
 
 # ── Estado del chat ───────────────────────────────────────────────────────────
@@ -52,30 +41,28 @@ HISTORY_VISIBLE = 8   # cuántos mensajes recientes mostrar
 class ChatState:
     """
     Contiene todo el estado mutable del chat en un único lugar.
-    Ninguna función de UI debería modificar el estado directamente;
-    debe pasar por los métodos de esta clase.
     """
 
     def __init__(self, engine: AutocompleteEngine):
-        self.engine       = engine
-        self.history:     list[tuple[str, str]] = []
+        self.engine = engine
+        self.history: list[tuple[str, str]] = []
         self.current_input = ""
-        self.suggestions:  list[str] = []
-        self.selected_idx: int       = -1
-        self.elapsed_ms:   float     = 0.0
-        self._npc_queue   = _build_npc_queue()
-        self._npc_index   = 0
+        self.suggestions: list[str] = []
+        self.selected_idx: int = -1
+        self.elapsed_ms: float = 0.0
+        self._npc_queue = _build_npc_queue()
+        self._npc_index = 0
 
     # ── Mutaciones ────────────────────────────────────────────────────────────
 
     def append_char(self, ch: str) -> None:
         self.current_input += ch
-        self.selected_idx   = -1
+        self.selected_idx = -1
         self._refresh_suggestions()
 
     def delete_char(self) -> None:
-        self.current_input  = self.current_input[:-1]
-        self.selected_idx   = -1
+        self.current_input = self.current_input[:-1]
+        self.selected_idx = -1
         self._refresh_suggestions()
 
     def next_suggestion(self) -> None:
@@ -117,20 +104,20 @@ class ChatState:
         self.selected_idx = 0 if self.suggestions else -1
 
     def _clear_suggestions(self) -> None:
-        self.suggestions  = []
+        self.suggestions = []
         self.selected_idx = -1
 
 
 def _build_npc_queue() -> list[tuple[str, str]]:
     """Devuelve la lista de respuestas NPC en orden fijo."""
     return [
-        ("NPC Guerrero",   "¡Por el reino! Buen movimiento."),
-        ("NPC Archimago",  "Fascinante elección, joven aventurero."),
-        ("NPC Arquera",    "Mi arco está listo. ¿Y el tuyo?"),
-        ("NPC Enano",      "¡Por las barbas de mi padre! ¡Vamos!"),
-        ("NPC Paladín",    "Debo ser valiente..."),
+        ("NPC Guerrero", "¡Por el reino! Buen movimiento."),
+        ("NPC Archimago", "Fascinante elección, joven aventurero."),
+        ("NPC Arquera", "Mi arco está listo. ¿Y el tuyo?"),
+        ("NPC Enano", "¡Por las barbas de mi padre! ¡Vamos!"),
+        ("NPC Paladín", "Debo ser valiente..."),
         ("NPC Explorador", "Interesante... muy interesante."),
-        ("NPC Oráculo",    "Tu destino ya está escrito..."),
+        ("NPC Oráculo", "Tu destino ya está escrito..."),
     ]
 
 
@@ -142,7 +129,7 @@ class Renderer:
     """
 
     def __init__(self):
-        self._last_lines = 0   # líneas pintadas en el ciclo anterior
+        self._last_lines = 0  # líneas pintadas en el ciclo anterior
 
     # ── Pantalla completa (solo al inicio) ────────────────────────────────────
 
@@ -184,19 +171,21 @@ class Renderer:
         lines = 0
 
         # Historial
-        print(SEP_THIN);  lines += 1
+        print(SEP_THIN);
+        lines += 1
         chat_lines = self._print_history(state.history)
         lines += chat_lines
-        print(SEP_THIN);  lines += 1
+        print(SEP_THIN);
+        lines += 1
 
         # Sugerencias
         lines += self._print_suggestions(state)
 
-        # Línea de entrada
+        # Línea de entrada: input (1 línea) + sugerencia inline (1 línea si hay)
         print()
         lines += 1
         self._print_prompt(state)
-        lines += 1
+        lines += 2 if (state.selected_idx >= 0 and state.suggestions) else 1
 
         self._last_lines = lines
 
@@ -239,15 +228,21 @@ class Renderer:
 
     @staticmethod
     def _print_prompt(state: ChatState) -> None:
+        # Línea 1: siempre muestra lo que el usuario está escribiendo
+        print(
+            f"  {Color.GREEN}{Color.BOLD}Tú ›{Color.RESET}  "
+            f"{Color.WHITE}{state.current_input}{Color.RESET}█"
+        )
+        # Línea 2: sugerencia más probable debajo del input (si existe)
         if state.selected_idx >= 0 and state.suggestions:
             selected = state.suggestions[state.selected_idx]
-            display  = (
-                f"{Color.CYAN}{Color.BOLD}{selected}{Color.RESET}"
-                f"{Color.GRAY} [TAB=siguiente · ENTER=aceptar · ESC=cancelar]{Color.RESET}"
+            print(
+                f"  {Color.GRAY}      ↳ {Color.CYAN}{Color.BOLD}{selected}{Color.RESET}"
+                f"{Color.GRAY}  [TAB=siguiente · ENTER=aceptar · ESC=cancelar]{Color.RESET}",
+                end="", flush=True
             )
         else:
-            display = f"{Color.WHITE}{state.current_input}{Color.RESET}█"
-        print(f"  {Color.GREEN}{Color.BOLD}Tú ›{Color.RESET}  {display}", end="", flush=True)
+            print(end="", flush=True)
 
     # ── Utilidades de cursor ──────────────────────────────────────────────────
 
@@ -263,24 +258,24 @@ class Renderer:
 # ── Bucle principal ───────────────────────────────────────────────────────────
 
 # Teclas especiales reconocidas
-_KEY_TAB        = "\t"
-_KEY_ENTER      = {"\r", "\n"}
-_KEY_ESC        = "\x1b"
-_KEY_CTRL_C     = "\x03"
-_KEY_CTRL_D     = "\x04"
-_KEY_BACKSPACE  = {"\x7f", "\x08", "WIN_\x08"}
-_KEY_SHIFT_TAB  = {"\x1b[Z", "ESC_[Z", "WIN_\x0f"}
+_KEY_TAB = "\t"
+_KEY_ENTER = {"\r", "\n"}
+_KEY_ESC = "\x1b"
+_KEY_CTRL_C = "\x03"
+_KEY_CTRL_D = "\x04"
+_KEY_BACKSPACE = {"\x7f", "\x08", "WIN_\x08"}
+_KEY_SHIFT_TAB = {"\x1b[Z", "ESC_[Z", "WIN_\x0f"}
 
 
 def run_chat(engine: AutocompleteEngine) -> None:
-    state    = ChatState(engine)
+    state = ChatState(engine)
     renderer = Renderer()
 
     # Mensajes iniciales del sistema
     state.history.extend([
-        ("Sistema",      "¡Bienvenido al chat del reino! Escribe para comenzar."),
+        ("Sistema", "¡Bienvenido al chat del reino! Escribe para comenzar."),
         ("NPC Guerrero", "¡Saludos, aventurero! ¿Listo para la batalla?"),
-        ("NPC Oráculo",  "Un mago nunca llega tarde... empieza a escribir."),
+        ("NPC Oráculo", "Un mago nunca llega tarde... empieza a escribir."),
     ])
 
     Renderer.clear_screen()

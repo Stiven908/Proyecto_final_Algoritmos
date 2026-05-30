@@ -58,10 +58,7 @@ class RedBlackTree:
     """
     Árbol Rojinegro autobalanceado para búsqueda de prefijos en O(log n).
 
-    Uso:
-        tree = RedBlackTree()
-        tree.insert("espada")
-        resultados = tree.search_prefix("esp")   # ["espada", ...]
+
     """
 
     def __init__(self):
@@ -224,12 +221,6 @@ class RedBlackTree:
 class Blacklist:
     """
     Lista negra de palabras prohibidas con búsqueda binaria en O(log n).
-
-    Uso:
-        bl = Blacklist(["malo", "feo"])
-        bl.contains("malo")          # True
-        bl.filter(["hola", "malo"])  # ["hola"]
-        bl.censor_text("hola malo")  # "hola ####"
     """
 
     def __init__(self, words: list[str]):
@@ -268,10 +259,7 @@ class AutocompleteEngine:
     """
     Integra el Árbol Rojinegro y la Lista Negra en un único motor.
 
-    Uso:
-        engine = AutocompleteEngine(vocabulario, palabras_prohibidas)
-        sugerencias, ms = engine.suggest("esp")
-        mensaje_limpio  = engine.censor_message("texto con malas palabras")
+
     """
 
     def __init__(self, vocabulary: list[str], blacklist_words: list[str]):
